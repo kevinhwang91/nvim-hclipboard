@@ -55,7 +55,7 @@ function MiddleWare:set(input, regtype)
         end
         self.set_func(input, regtype)
     else
-        local stdin = uv.new_pipe()
+        local stdin = uv.new_pipe(false)
         local handle
         handle = uv.spawn(self.set_path, {
             args = self.set_args,
