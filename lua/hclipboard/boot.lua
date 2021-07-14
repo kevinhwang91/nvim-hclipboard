@@ -5,8 +5,8 @@ local fn = vim.fn
 
 local map_tbl
 
-local function init()
-    map_tbl = {
+local function get_tbl()
+    map_tbl = map_tbl and map_tbl or {
         pbcopy = {
             copy = {['+'] = {'pbcopy'}, ['*'] = {'pbcopy'}},
             paste = {['+'] = {'pbpaste'}, ['*'] = {'pbpaste'}},
@@ -66,10 +66,11 @@ local function init()
             paste = {['+'] = {'tmux', 'save-buffer', '-'}, ['*'] = {'tmux', 'save-buffer', '-'}}
         }
     }
+    return map_tbl
 end
 
 local function map_provider(name)
-    local mapped = map_tbl[name]
+    local mapped = get_tbl()[name]
     if name == 'win32yank' then
         if fn.has('wsl') and fn.getftype(fn.exepath('win32yank.exe')) == 'link' then
             local win32yank = fn.resolve(fn.exepath('win32yank.exe'))
@@ -86,16 +87,34 @@ local function map_provider(name)
     return mapped
 end
 
-local function get_viml_func(dname, rname)
-    local func_name = api.nvim_exec(([[echo g:hclipboard.%s[%q] ]]):format(dname, rname), true)
-    local lambda_name = func_name:match('<lambda>%d+')
-    if lambda_name then
-        func_name = lambda_name
+local function parse_action(dict, key, regname)
+    local function viml_func_name(k, rname)
+        local func_name = api.nvim_exec(([[echo g:hclipboard.%s[%q] ]]):format(k, rname), true)
+        local lambda_name = func_name:match('<lambda>%d+')
+        if lambda_name then
+            func_name = lambda_name
+        end
+        return func_name
     end
-    return func_name
+
+    local action = dict[key][regname]
+    local atype = type(action)
+
+    local cmds, func
+    if atype == 'userdata' and action == vim.NIL then
+        -- vimscript -> lua, function can't be transformed directly
+        -- get the name of function in vimscript instead of function reference
+        local func_name = viml_func_name(key, regname)
+        func = fn[func_name]
+    elseif atype == 'string' then
+        cmds = vim.split(action, '%s+')
+    else
+        cmds = action
+    end
+    return cmds, func
 end
 
-function M.do_once(method, regname)
+function M.do_once(method, regname, lines, regtype)
     local hcb = vim.g.hclipboard
     if not hcb or type(hcb) ~= 'table' or vim.tbl_isempty(hcb) then
         vim.g.clipboard = nil
@@ -105,56 +124,33 @@ function M.do_once(method, regname)
 
     local mwm = require('hclipboard.middleware')
     for rname in pairs(hcb.copy) do
-        local get_action, set_action = hcb.paste[rname], hcb.copy[rname]
-        local t_ga, t_sa = type(get_action), type(set_action)
-
-        if t_ga == 'string' then
-            get_action = vim.split(get_action, '%s+')
-        end
-        local get_cmds
-        if t_ga ~= 'userdata' or get_action ~= vim.NIL then
-            get_cmds = get_action
-        end
-
-        local set_cmds, set_func
-        if t_sa == 'userdata' and set_action == vim.NIL then
-            local func_name = get_viml_func('copy', rname)
-            set_func = vim.fn[func_name]
-        elseif t_sa == 'string' then
-            set_cmds = vim.split(set_action, '%s+')
-        else
-            set_cmds = set_action
-        end
+        local get_cmds, get_func = parse_action(hcb, 'paste', rname)
+        local set_cmds, set_func = parse_action(hcb, 'copy', rname)
         local mw = mwm.new({
             regname = rname,
             set_cmds = set_cmds,
             set_func = set_func,
             get_cmds = get_cmds,
+            get_func = get_func,
             cache_enabled = hcb.cache_enabled
         })
-        if get_cmds then
-            hcb.paste[rname] = function()
-                return mw:get()
-            end
+        hcb.paste[rname] = function()
+            return mw:get()
+        end
+        hcb.copy[rname] = function(rdata, rtype)
+            -- hclipboard need context within TextYankPost, but `setreg` or `let @` can't fire
+            -- TextYankPost event, so store the data and type for schedule fucntion to make sure
+            -- that it is called after TextYankPost
+            mw:store_pending_data(rdata, rtype)
+            vim.schedule(function()
+                mw:set()
+                mw:clear_pending_data()
+            end)
         end
         mwm.set(rname, mw)
     end
 
     vim.g.clipboard = hcb
-    cmd([[
-        let Elambda = {l, e -> 0}
-        let HcbPasteExists = exists('g:hclipboard.paste') && type(g:hclipboard.paste) == v:t_dict
-        for rname in keys(g:clipboard.copy)
-            let g:clipboard.copy[rname] = Elambda
-            if HcbPasteExists && g:clipboard.paste[rname] == v:null
-                if type(get(g:hclipboard.paste, rname)) == v:t_func
-                    let g:clipboard.paste[rname] = g:hclipboard.paste[rname]
-                endif
-            endif
-        endfor
-        unlet HcbPasteExists
-        unlet Elambda
-     ]])
 
     fn['provider#clipboard#Executable']()
 
@@ -165,21 +161,12 @@ function M.do_once(method, regname)
          aug END
      ]])
 
-    if method == 'get' then
-        local res
-        if api.nvim_eval(
-            ([[exists('g:hclipboard.paste') && type(get(g:hclipboard.paste, %q)) == v:t_func]]):format(
-                regname)) == 1 then
-            local func_name = get_viml_func('paste', regname)
-            res = vim.fn[func_name]()
-        else
-            res = require('hclipboard.action').receive(regname)
-        end
-        return res
-    end
     -- vim.g.hclipboard = nil
+    if method == 'get' then
+        return hcb.paste[regname]()
+    else
+        hcb.copy[regname](lines, regtype)
+    end
 end
-
-init()
 
 return M

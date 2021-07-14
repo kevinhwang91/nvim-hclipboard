@@ -9,8 +9,9 @@ local function init()
     user_passby_cb = conf.should_passby_cb
 end
 
-local function should_passby(rname, ev)
+local function should_passby(rname)
     local ret = false
+    local ev = vim.v.event
     if user_passby_cb then
         ret = user_passby_cb(rname, ev)
     else
@@ -31,13 +32,10 @@ function M.send()
         return
     end
 
-    local ev = vim.v.event
-    local rdata = ev.regcontents
-    local rtype = ev.regtype
-
-    if not should_passby(rname, ev) then
-        mw:set(rdata, rtype)
+    if not should_passby(rname) then
+        mw:set()
     end
+    mw:clear_pending_data()
 end
 
 function M.receive(regname)

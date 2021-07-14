@@ -22,8 +22,10 @@ function MiddleWare.new(o)
     o.cache_enabled = o.cache_enabled
 
     o.get_cmds = o.get_cmds
+    o.get_func = o.get_func
 
     o.set_cmds = o.set_cmds
+    o.set_func = o.set_func
     if o.set_cmds then
         o.set_path = o.set_path or o.set_cmds[1]
         o.set_args = o.set_args
@@ -35,24 +37,30 @@ function MiddleWare.new(o)
         end
         o.set_args = args
         o.handle = nil
-        o.regdata = {''}
-        o.regtype = 'v'
-    else
-        o.set_func = o.set_func
     end
+    o.regdata = {''}
+    o.regtype = 'v'
     return o
 end
 
-function MiddleWare:set(input, regtype)
-    local need_append = regtype ~= 'v' and regtype ~= ''
-    if #input <= 0 then
+function MiddleWare:store_pending_data(rdata, rtype)
+    self.pending_regdata = rdata
+    self.pending_regtype = rtype
+end
+
+function MiddleWare:clear_pending_data()
+    self.pending_regdata = nil
+    self.pending_regtype = nil
+end
+
+function MiddleWare:set()
+    local input = self.pending_regdata
+    local regtype = self.pending_regtype
+    if not input or not regtype or #input <= 0 then
         return
     end
 
     if self.set_func then
-        if need_append then
-            table.insert(input, '')
-        end
         self.set_func(input, regtype)
     else
         local stdin = uv.new_pipe(false)
@@ -81,16 +89,12 @@ function MiddleWare:set(input, regtype)
             self.handle = handle
         end
 
-        stdin:write(table.concat(input, '\n') .. (need_append and '\n' or ''), function()
+        stdin:write(table.concat(input, '\n'), function()
             stdin:close()
         end)
-
-        if need_append then
-            table.insert(input, '')
-        end
-        self.regtype = regtype
-        self.regdata = input
     end
+    self.regtype = regtype
+    self.regdata = input
 end
 
 local function tbl_str_equal(t1, t2)
@@ -107,14 +111,21 @@ local function tbl_str_equal(t1, t2)
 end
 
 function MiddleWare:get()
-    if self.handle then
-        return {self.regdata, self.regtype}
+    if self.pending_regdata and self.pending_regtype then
+        return {self.pending_regdata, self.pending_regtype}
     end
-    local cbdata = fn.systemlist(self.get_cmds, {''}, true)
-    if tbl_str_equal(cbdata, self.regdata) then
-        return {cbdata, self.regtype}
+    if self.get_func then
+        return self.get_func()
+    else
+        if self.handle then
+            return {self.regdata, self.regtype}
+        end
+        local cbdata = fn.systemlist(self.get_cmds, {''}, true)
+        if tbl_str_equal(cbdata, self.regdata) then
+            return {cbdata, self.regtype}
+        end
+        return {cbdata, 'v'}
     end
-    return {cbdata, 'v'}
 end
 
 M.new = MiddleWare.new

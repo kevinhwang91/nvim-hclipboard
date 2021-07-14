@@ -24,8 +24,8 @@ function M.start()
     cb.copy = cb.copy or {['*'] = true, ['+'] = true}
     cb.paste = cb.paste or {}
     for rname in pairs(cb.copy) do
-        cb.copy[rname] = function()
-            require('hclipboard.boot').do_once('set', rname)
+        cb.copy[rname] = function(lines, regtype)
+            require('hclipboard.boot').do_once('set', rname, lines, regtype)
         end
         cb.paste[rname] = function()
             return require('hclipboard.boot').do_once('get', rname)
