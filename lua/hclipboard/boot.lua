@@ -3,7 +3,10 @@ local cmd = vim.cmd
 local api = vim.api
 local fn = vim.fn
 
+local mwm = require('hclipboard.middleware')
+
 local map_tbl
+local raw_cb_empty
 
 local function get_tbl()
     map_tbl = map_tbl and map_tbl or {
@@ -84,7 +87,7 @@ local function map_provider(name)
         mapped.cache_enabled = true
     end
     mapped[name] = name
-    return mapped
+    return vim.deepcopy(mapped)
 end
 
 local function parse_action(dict, key, regname)
@@ -117,12 +120,12 @@ end
 function M.do_once(method, regname, lines, regtype)
     local hcb = vim.g.hclipboard
     if not hcb or type(hcb) ~= 'table' or vim.tbl_isempty(hcb) then
+        raw_cb_empty = true
         vim.g.clipboard = nil
         local pname = fn['provider#clipboard#Executable']()
         hcb = map_provider(pname)
     end
 
-    local mwm = require('hclipboard.middleware')
     for rname in pairs(hcb.copy) do
         local get_cmds, get_func = parse_action(hcb, 'paste', rname)
         local set_cmds, set_func = parse_action(hcb, 'copy', rname)
@@ -155,18 +158,33 @@ function M.do_once(method, regname, lines, regtype)
     fn['provider#clipboard#Executable']()
 
     cmd([[
-         aug HClipBoard
-             au!
-             au TextYankPost * lua require('hclipboard.action').send()
-         aug END
+        aug HClipBoard
+            au!
+            au TextYankPost * lua require('hclipboard.action').send()
+        aug END
      ]])
 
-    -- vim.g.hclipboard = nil
     if method == 'get' then
         return hcb.paste[regname]()
     else
         hcb.copy[regname](lines, regtype)
     end
+end
+
+function M.clear()
+    if raw_cb_empty then
+        vim.g.clipboard = nil
+    else
+        cmd([[let g:clipboard = g:hclipboard]])
+    end
+    raw_cb_empty = nil
+    vim.g.hclipboard = nil
+    mwm.clear()
+    cmd([[
+        au! HClipBoard
+        aug! HClipBoard
+    ]])
+    fn['provider#clipboard#Executable']()
 end
 
 return M

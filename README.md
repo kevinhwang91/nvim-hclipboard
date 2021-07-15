@@ -13,6 +13,8 @@ The initial motivation of Hclipboard is to solve this issue.
 https://user-images.githubusercontent.com/17562139/125729031-5ab3385c-1a33-4d48-9e35-c615d07e091e.mp4
 <!-- markdownlint-enable MD034-->
 
+> set clipboard=unnamedplus in Neovim and use xsel as my system clipboard
+
 ## Table of contents
 
 * [Table of contents](#table-of-contents)
@@ -23,6 +25,7 @@ https://user-images.githubusercontent.com/17562139/125729031-5ab3385c-1a33-4d48-
   * [Minimal configuration](#minimal-configuration)
   * [Usage](#usage)
 * [Documentation](#documentation)
+* [Function](#function)
 * [Setup and description](#setup-and-description)
 * [Advanced configuration](#advanced-configuration)
 * [Feedback](#feedback)
@@ -68,6 +71,14 @@ require('hclipboard').start()
 ### Usage
 
 ## Documentation
+
+## Function
+
+Functions are all inside `hclipboard` module, get module by `require('hclipboard')`
+
+- start(): start to hijack clipboard provider
+
+- stop(): stop to hijack clipboard provider
 
 ## Setup and description
 

@@ -14,6 +14,14 @@ function M.set(regname, middleware)
     middleware_tbl[regname] = middleware
 end
 
+function M.del(regname)
+    middleware_tbl[regname] = nil
+end
+
+function M.clear()
+    middleware_tbl = {}
+end
+
 function MiddleWare.new(o)
     local self = MiddleWare
     o = o or {}
