@@ -6,7 +6,6 @@ local fn = vim.fn
 local mwm = require('hclipboard.middleware')
 
 local map_tbl
-local raw_cb_empty
 
 local function get_tbl()
     map_tbl = map_tbl and map_tbl or {
@@ -120,7 +119,6 @@ end
 function M.do_once(method, regname, lines, regtype)
     local hcb = vim.g.hclipboard
     if not hcb or type(hcb) ~= 'table' or vim.tbl_isempty(hcb) then
-        raw_cb_empty = true
         vim.g.clipboard = nil
         local pname = fn['provider#clipboard#Executable']()
         hcb = map_provider(pname)
@@ -172,15 +170,15 @@ function M.do_once(method, regname, lines, regtype)
 end
 
 function M.clear()
-    if raw_cb_empty then
+    local hcb = vim.g.hclipboard
+    if not hcb or type(hcb) ~= 'table' or vim.tbl_isempty(hcb) then
         vim.g.clipboard = nil
     else
         cmd([[let g:clipboard = g:hclipboard]])
     end
-    raw_cb_empty = nil
     vim.g.hclipboard = nil
     mwm.clear()
-    cmd([[
+    pcall(cmd,[[
         au! HClipBoard
         aug! HClipBoard
     ]])
