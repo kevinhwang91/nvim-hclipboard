@@ -1,5 +1,6 @@
 local M = {}
 local fn = vim.fn
+local api = vim.api
 local uv = vim.loop
 
 local middleware_tbl = {}
@@ -71,6 +72,13 @@ function MiddleWare:set()
             cmd = '/',
             detached = self.cache_enabled
         }, function(code, signal)
+            local _ = signal
+            if code ~= 0 then
+                vim.schedule(function()
+                    api.nvim_err_writeln(('%s: return code %d'):format(
+                        table.concat(self.set_cmds, ' '), code))
+                end)
+            end
             handle:close()
             if self.handle == handle then
                 self.handle = nil
@@ -111,21 +119,27 @@ local function tbl_str_equal(t1, t2)
 end
 
 function MiddleWare:get()
+    local regdata, regtype = {}, 'v'
     if self.pending_regdata and self.pending_regtype then
-        return {self.pending_regdata, self.pending_regtype}
-    end
-    if self.get_func then
-        return self.get_func()
+        regdata, regtype = self.pending_regdata, self.pending_regtype
+    elseif self.get_func then
+        regdata, regtype = unpack(self.get_func())
+    elseif self.handle then
+        regdata, regtype = self.regdata, self.regtype
     else
-        if self.handle then
-            return {self.regdata, self.regtype}
-        end
         local cbdata = fn.systemlist(self.get_cmds, {''}, true)
-        if tbl_str_equal(cbdata, self.regdata) then
-            return {cbdata, self.regtype}
+        if vim.v.shell_error == 0 then
+            if tbl_str_equal(cbdata, self.regdata) then
+                regdata, regtype = cbdata, self.regtype
+            else
+                regdata, regtype = cbdata, 'v'
+            end
+        else
+            api.nvim_err_writeln(('%s: %s'):format(table.concat(self.get_cmds, ' '),
+                table.concat(cbdata, ' ')))
         end
-        return {cbdata, 'v'}
     end
+    return {regdata, regtype}
 end
 
 M.new = MiddleWare.new

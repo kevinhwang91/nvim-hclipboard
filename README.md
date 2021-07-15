@@ -2,7 +2,31 @@
 
 Hijack your clipboard, make you become the host of the clipboard!!!
 
+Hclipboard will bypass the text into clipboard for change operator in visual/select mode.
+
+Run `:help v_c` or `:help v_s` to get more information.
+
+Expanding snippet will enter select mode automatically which will pollute your clipboard.
+The initial motivation of Hclipboard is to solve this issue.
+
+<!-- markdownlint-disable MD034-->
+https://user-images.githubusercontent.com/17562139/125729031-5ab3385c-1a33-4d48-9e35-c615d07e091e.mp4
+<!-- markdownlint-enable MD034-->
+
 ## Table of contents
+
+* [Table of contents](#table-of-contents)
+* [Features](#features)
+* [Quickstart](#quickstart)
+  * [Requirements](#requirements)
+  * [Installation](#installation)
+  * [Minimal configuration](#minimal-configuration)
+  * [Usage](#usage)
+* [Documentation](#documentation)
+* [Setup and description](#setup-and-description)
+* [Advanced configuration](#advanced-configuration)
+* [Feedback](#feedback)
+* [License](#license)
 
 ## Features
 
@@ -33,28 +57,41 @@ use {'kevinhwang91/nvim-hclipboard'}
 
 ```vim
 " vimscript
-lua require('hclipboard').setup().start()
+lua require('hclipboard').start()
 ```
 
 ```lua
 -- lua
-require('hclipboard').setup().start()
+require('hclipboard').start()
 ```
 
 ### Usage
 
 ## Documentation
 
-### Setup and description
+## Setup and description
+
+```lua
+{
+    should_bypass_cb = {
+        description = [[Callback function to decide whether to let text bypass the clipboard.
+            *WIP*
+            There's no guarantee that this function will not be changed in the future. If it is
+            changed, it will be listed in the CHANGES file.]],
+        default = nil
+    },
+}
+```
 
 ## Advanced configuration
 
-### Customize configuration
-
 ```lua
--- lua
+-- bypass text into clipboard for change and delete operator in visual/select mode.
 require('hclipboard').setup({
-    should_passby_cb = function(regname, ev)
+    -- Return true the text will be bypassed the clipboard
+    -- @param regname register name
+    -- @param ev vim.v.ev TextYankPost event
+    should_bypass_cb = function(regname, ev)
         local ret = false
         if ev.visual and (ev.operator == 'd' or ev.operator == 'c') then
             if ev.regname == '' or ev.regname == regname then
@@ -65,6 +102,8 @@ require('hclipboard').setup({
     end
 }).start()
 ```
+
+> default behavior bypass change operator but don't bypass delete operator
 
 ## Feedback
 
