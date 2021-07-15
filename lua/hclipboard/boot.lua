@@ -73,20 +73,23 @@ end
 
 local function map_provider(name)
     local mapped = get_tbl()[name]
-    if name == 'win32yank' then
-        if fn.has('wsl') and fn.getftype(fn.exepath('win32yank.exe')) == 'link' then
-            local win32yank = fn.resolve(fn.exepath('win32yank.exe'))
-            mapped.copy['+'][1] = win32yank
-            mapped.copy['*'][1] = win32yank
-            mapped.paste['+'][1] = win32yank
-            mapped.paste['*'][1] = win32yank
+    if mapped then
+        if name == 'win32yank' then
+            if fn.has('wsl') and fn.getftype(fn.exepath('win32yank.exe')) == 'link' then
+                local win32yank = fn.resolve(fn.exepath('win32yank.exe'))
+                mapped.copy['+'][1] = win32yank
+                mapped.copy['*'][1] = win32yank
+                mapped.paste['+'][1] = win32yank
+                mapped.paste['*'][1] = win32yank
+            end
         end
+        if mapped.cache_enabled == nil then
+            mapped.cache_enabled = true
+        end
+        mapped[name] = name
+        mapped = vim.deepcopy(mapped)
     end
-    if mapped.cache_enabled == nil then
-        mapped.cache_enabled = true
-    end
-    mapped[name] = name
-    return vim.deepcopy(mapped)
+    return mapped
 end
 
 local function parse_action(dict, key, regname)
@@ -122,6 +125,11 @@ function M.do_once(method, regname, lines, regtype)
         vim.g.clipboard = nil
         local pname = fn['provider#clipboard#Executable']()
         hcb = map_provider(pname)
+        if not hcb then
+            api.nvim_err_writeln(
+                'clipboard: No clipboard tool. :help clipboard or open an issue to nvim-hclipboard')
+            return
+        end
     end
 
     for rname in pairs(hcb.copy) do
@@ -178,7 +186,7 @@ function M.clear()
     end
     vim.g.hclipboard = nil
     mwm.clear()
-    pcall(cmd,[[
+    pcall(cmd, [[
         au! HClipBoard
         aug! HClipBoard
     ]])
