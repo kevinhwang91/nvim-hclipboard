@@ -22,7 +22,6 @@ https://user-images.githubusercontent.com/17562139/125729031-5ab3385c-1a33-4d48-
 * [Quickstart](#quickstart)
   * [Requirements](#requirements)
   * [Installation](#installation)
-  * [Minimal configuration](#minimal-configuration)
   * [Usage](#usage)
 * [Documentation](#documentation)
 * [Function](#function)
@@ -56,7 +55,7 @@ Install nvim-hclipboard with [Packer.nvim](https://github.com/wbthomason/packer.
 use {'kevinhwang91/nvim-hclipboard'}
 ```
 
-### Minimal configuration
+### Usage
 
 ```vim
 " vimscript
@@ -67,8 +66,6 @@ lua require('hclipboard').start()
 -- lua
 require('hclipboard').start()
 ```
-
-### Usage
 
 ## Documentation
 
