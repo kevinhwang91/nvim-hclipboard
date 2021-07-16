@@ -73,18 +73,22 @@ function MiddleWare:set()
         self.set_func(input, regtype)
     else
         local stdin = uv.new_pipe(false)
+        local stderr = uv.new_pipe(false)
+        local stderr_buffered = {}
         local handle
         handle = uv.spawn(self.set_path, {
             args = self.set_args,
-            stdio = {stdin},
+            stdio = {stdin, nil, stderr},
             cmd = '/',
             detached = self.cache_enabled
         }, function(code, signal)
             local _ = signal
             if code ~= 0 then
                 vim.schedule(function()
-                    api.nvim_err_writeln(('%s: return code %d'):format(
-                        table.concat(self.set_cmds, ' '), code))
+                    api.nvim_err_writeln(
+                        ('clipboard: error invoking %s: code: %d, message: %s'):format(
+                            table.concat(self.set_cmds, ' '), code,
+                            table.concat(stderr_buffered, ' ')))
                 end)
             end
             handle:close()
@@ -105,6 +109,14 @@ function MiddleWare:set()
             self.handle = handle
         end
 
+        stderr:read_start(function(err, data)
+            assert(not err, err)
+            if data then
+                table.insert(stderr_buffered, data)
+            else
+                stderr:close()
+            end
+        end)
         stdin:write(table.concat(input, '\n'), function()
             stdin:close()
         end)
