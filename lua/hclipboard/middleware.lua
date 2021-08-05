@@ -148,15 +148,16 @@ function MiddleWare:get()
         regdata, regtype = self.regdata, self.regtype
     else
         local cbdata = fn.systemlist(self.get_cmds, {''}, true)
-        if vim.v.shell_error == 0 then
+        local sh_error = vim.v.shell_error
+        if sh_error == 0 then
             if tbl_str_equal(cbdata, self.regdata) then
                 regdata, regtype = cbdata, self.regtype
             else
                 regdata, regtype = cbdata, 'v'
             end
         else
-            api.nvim_err_writeln(('%s: %s'):format(table.concat(self.get_cmds, ' '),
-                table.concat(cbdata, ' ')))
+            api.nvim_err_writeln(('%s return %d: %s'):format(table.concat(self.get_cmds, ' '),
+                sh_error, table.concat(cbdata, ' ')))
         end
     end
     return {regdata, regtype}
