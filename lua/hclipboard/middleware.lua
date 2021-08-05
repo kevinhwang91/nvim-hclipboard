@@ -156,8 +156,14 @@ function MiddleWare:get()
                 regdata, regtype = cbdata, 'v'
             end
         else
-            api.nvim_err_writeln(('%s return %d: %s'):format(table.concat(self.get_cmds, ' '),
-                sh_error, table.concat(cbdata, ' ')))
+            if self.get_did_error ~= sh_error then
+                self.get_did_error = sh_error
+                api.nvim_err_writeln(('%s return %d: %s'):format(table.concat(self.get_cmds, ' '),
+                    sh_error, table.concat(cbdata, ' ')))
+            end
+            -- respect original try_cmd logic
+            -- some vulnerable system environment may throw error
+            return 0
         end
     end
     return {regdata, regtype}
