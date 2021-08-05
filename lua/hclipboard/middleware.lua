@@ -158,8 +158,9 @@ function MiddleWare:get()
         else
             if self.get_did_error ~= sh_error then
                 self.get_did_error = sh_error
-                api.nvim_err_writeln(('%s return %d: %s'):format(table.concat(self.get_cmds, ' '),
-                    sh_error, table.concat(cbdata, ' ')))
+                local msg = ('%s return %d: %s'):format(table.concat(self.get_cmds, ' '), sh_error,
+                    table.concat(cbdata, ' '))
+                api.nvim_echo({{msg, 'Error'}}, true, {})
             end
             -- respect original try_cmd logic
             -- some vulnerable system environment may throw error
