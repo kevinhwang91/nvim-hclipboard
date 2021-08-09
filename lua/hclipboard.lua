@@ -18,6 +18,10 @@ function M.setup(opts)
 end
 
 function M.start()
+    local err = fn['provider#clipboard#Error']()
+    if err ~= '' then
+        return
+    end
     M.setup()
     if started then
         require('hclipboard.boot').clear()

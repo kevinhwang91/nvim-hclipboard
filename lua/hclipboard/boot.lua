@@ -132,6 +132,7 @@ function M.do_once(method, regname, lines, regtype)
                     'Error'
                 }
             }, true, {})
+            M.clear()
             return
         end
     end
