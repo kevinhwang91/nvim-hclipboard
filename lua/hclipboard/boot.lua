@@ -126,8 +126,12 @@ function M.do_once(method, regname, lines, regtype)
         local pname = fn['provider#clipboard#Executable']()
         hcb = map_provider(pname)
         if not hcb then
-            api.nvim_err_writeln(
-                'clipboard: No clipboard tool. :help clipboard or open an issue to nvim-hclipboard')
+            api.nvim_echo({
+                {
+                    'clipboard: No clipboard tool.:help clipboard or open an issue to nvim-hclipboard',
+                    'Error'
+                }
+            }, true, {})
             return
         end
     end
