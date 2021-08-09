@@ -18,9 +18,13 @@ function M.setup(opts)
 end
 
 function M.start()
-    local err = fn['provider#clipboard#Error']()
-    if err ~= '' then
+    if vim.o.clipboard == '' then
         return
+    else
+        local err = fn['provider#clipboard#Error']()
+        if err ~= '' then
+            return
+        end
     end
     M.setup()
     if started then
