@@ -1,5 +1,7 @@
 # nvim-hclipboard
 
+To be archives. `:h ModeChanged` since 0.7.0
+
 Hijack your clipboard, make you become the host of the clipboard!!!
 
 Hclipboard will bypass the text into clipboard for change operator in visual/select mode.
